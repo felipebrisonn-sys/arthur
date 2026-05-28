@@ -19,7 +19,7 @@ jobs:
       PROJECT_LABEL: "Funil de Aplicação Captador"
       LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
       TELEGRAM_CHAT_ID: "-1001969196147"
-      TELEGRAM_MESSAGE_THREAD_ID: "5"
+      TELEGRAM_MESSAGE_THREAD_ID: "301599"
 
     steps:
       - name: Checkout
