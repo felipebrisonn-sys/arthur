@@ -2,8 +2,8 @@ name: Relatorio diario AGX Captador
 
 on:
   schedule:
-    # 12:00 UTC = 09:00 em Brasilia.
-    - cron: "0 12 * * *"
+    # 12:10 UTC = 09:10 em Brasilia.
+    - cron: "10 12 * * *"
   workflow_dispatch:
 
 jobs:
