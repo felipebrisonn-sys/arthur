@@ -21,6 +21,7 @@ LEAD_ACTION_TYPE = os.getenv("LEAD_ACTION_TYPE", "offsite_conversion.fb_pixel_cu
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "-1001969196147")
 TELEGRAM_MESSAGE_THREAD_ID = os.getenv("TELEGRAM_MESSAGE_THREAD_ID", "5")
+SENT_MARKER_PATH = os.getenv("SENT_MARKER_PATH", "")
 
 
 def require_env(name: str, value: str) -> str:
@@ -79,6 +80,19 @@ def telegram_send(text: str) -> dict[str, Any]:
         params,
         method="POST",
     )
+
+
+def write_sent_marker(message_id: Any) -> None:
+    if not SENT_MARKER_PATH:
+        return
+
+    marker_dir = os.path.dirname(SENT_MARKER_PATH)
+    if marker_dir:
+        os.makedirs(marker_dir, exist_ok=True)
+
+    with open(SENT_MARKER_PATH, "w", encoding="utf-8") as marker:
+        marker.write(f"sent_at={datetime.now(ZoneInfo('America/Sao_Paulo')).isoformat()}\n")
+        marker.write(f"telegram_message_id={message_id}\n")
 
 
 def number(value: Any) -> float:
@@ -210,7 +224,9 @@ def main() -> int:
     if not result.get("ok"):
         raise RuntimeError(f"Telegram send failed: {result}")
 
-    print(f"Report sent. Telegram message_id={result.get('result', {}).get('message_id')}")
+    message_id = result.get("result", {}).get("message_id")
+    write_sent_marker(message_id)
+    print(f"Report sent. Telegram message_id={message_id}")
     return 0
 
 
