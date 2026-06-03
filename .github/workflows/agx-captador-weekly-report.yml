@@ -1,0 +1,88 @@
+name: Relatorio semanal AGX Captador
+
+on:
+  schedule:
+    # Tenta durante as segundas; o proprio workflow so envia entre 10h e 10h59 em Brasilia.
+    - cron: "*/5 * * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: agx-captador-weekly-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  send-weekly-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      SENT_MARKER_PATH: .agx-weekly-report-sent/sent.txt
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      META_GRAPH_API_VERSION: v20.0
+      META_ACCOUNT_ID: act_519770400740924
+      CAMPAIGN_NAME_FILTER: "[CAPTADOR]"
+      PROJECT_LABEL: "Funil de Aplicação Captador"
+      LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
+      TELEGRAM_CHAT_ID: "-1001969196147"
+      TELEGRAM_MESSAGE_THREAD_ID: "301599"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Janela semanal de envio
+        id: send-window
+        run: |
+          date_br="$(TZ=America/Sao_Paulo date +%Y-%m-%d)"
+          time_br="$(TZ=America/Sao_Paulo date +%H%M)"
+          weekday_br="$(TZ=America/Sao_Paulo date +%u)"
+          in_window=false
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            in_window=true
+          elif [ "$weekday_br" = "1" ] && [ "$time_br" -ge 1000 ] && [ "$time_br" -le 1059 ]; then
+            in_window=true
+          fi
+
+          echo "date=$date_br" >> "$GITHUB_OUTPUT"
+          echo "time=$time_br" >> "$GITHUB_OUTPUT"
+          echo "weekday=$weekday_br" >> "$GITHUB_OUTPUT"
+          echo "in_window=$in_window" >> "$GITHUB_OUTPUT"
+
+      - name: Fora da janela
+        if: steps.send-window.outputs.in_window != 'true'
+        run: echo "Fora da janela semanal de 10h em Brasilia; nao enviando."
+
+      - name: Verificar se ja enviou nesta semana
+        if: steps.send-window.outputs.in_window == 'true'
+        id: sent-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .agx-weekly-report-sent
+          key: agx-captador-weekly-sent-${{ steps.send-window.outputs.date }}
+
+      - name: Ja enviado nesta semana
+        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit == 'true'
+        run: echo "Relatorio semanal ja enviado; pulando duplicata."
+
+      - name: Setup Python
+        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Send weekly Telegram report
+        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true'
+        run: python scripts/send_agx_weekly_captador_report.py
+
+      - name: Salvar trava semanal
+        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true' && hashFiles('.agx-weekly-report-sent/sent.txt') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .agx-weekly-report-sent
+          key: agx-captador-weekly-sent-${{ steps.send-window.outputs.date }}
