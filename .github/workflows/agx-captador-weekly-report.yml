@@ -2,8 +2,8 @@ name: Relatorio semanal AGX Captador
 
 on:
   schedule:
-    # Tenta durante as segundas; o proprio workflow so envia entre 10h e 10h59 em Brasilia.
-    - cron: "*/5 * * * 1"
+    # Tenta durante a manha de segunda; o proprio workflow so envia uma vez por semana depois das 10h em Brasilia.
+    - cron: "7,22,37,52 13-17 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -45,7 +45,7 @@ jobs:
 
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             in_window=true
-          elif [ "$weekday_br" = "1" ] && [ "$time_br" -ge 1000 ] && [ "$time_br" -le 1059 ]; then
+          elif [ "$weekday_br" = "1" ] && [ "$time_br" -ge 1000 ] && [ "$time_br" -le 1459 ]; then
             in_window=true
           fi
 
@@ -56,7 +56,7 @@ jobs:
 
       - name: Fora da janela
         if: steps.send-window.outputs.in_window != 'true'
-        run: echo "Fora da janela semanal de 10h em Brasilia; nao enviando."
+        run: echo "Fora da janela semanal depois das 10h em Brasilia; nao enviando."
 
       - name: Verificar se ja enviou nesta semana
         if: steps.send-window.outputs.in_window == 'true'
