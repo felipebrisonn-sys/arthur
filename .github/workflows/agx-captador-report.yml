@@ -2,8 +2,8 @@ name: Relatorio diario AGX Captador
 
 on:
   schedule:
-    # Tenta durante a manha; o proprio workflow so envia uma vez por dia depois das 09h em Brasilia.
-    - cron: "7,22,37,52 12-16 * * *"
+    # Tenta em varios horarios; o primeiro run depois das 09h envia e a trava evita duplicidade.
+    - cron: "17 12,14,16,18,20,22 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -44,7 +44,7 @@ jobs:
 
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             in_window=true
-          elif [ "$time_br" -ge 900 ] && [ "$time_br" -le 1359 ]; then
+          elif [ "$time_br" -ge 900 ]; then
             in_window=true
           fi
 
@@ -54,7 +54,7 @@ jobs:
 
       - name: Fora da janela
         if: steps.send-window.outputs.in_window != 'true'
-        run: echo "Fora da janela diaria depois das 09h em Brasilia; nao enviando."
+        run: echo "Ainda nao sao 09h em Brasilia; nao enviando."
 
       - name: Verificar se ja enviou hoje
         if: steps.send-window.outputs.in_window == 'true'
