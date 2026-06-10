@@ -106,6 +106,14 @@ def money(value: float) -> str:
     return f"${value:,.2f}"
 
 
+def summary_block(summary: dict[str, float]) -> str:
+    return (
+        f"  Spend: {money(summary['spend'])}\n"
+        f"  Leads: {int(summary['leads'])}\n"
+        f"  CPL: {money(summary['cpl'])}"
+    )
+
+
 def date_br(value) -> str:
     return value.strftime("%d/%m/%Y")
 
@@ -180,6 +188,26 @@ def fetch_summary(campaign_ids: list[str], since: str, until: str) -> dict[str, 
     return {"spend": spend, "leads": leads, "cpl": cpl}
 
 
+def split_campaigns(campaigns: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    cold_campaigns = [
+        campaign
+        for campaign in campaigns
+        if any(keyword in campaign.get("name", "").lower() for keyword in ("frio", "cold"))
+    ]
+    cold_ids = {campaign["id"] for campaign in cold_campaigns}
+    warm_campaigns = [campaign for campaign in campaigns if campaign["id"] not in cold_ids]
+    return warm_campaigns, cold_campaigns
+
+
+def accumulated_summary(campaigns: list[dict[str, Any]], today) -> dict[str, float]:
+    if not campaigns:
+        return {"spend": 0.0, "leads": 0.0, "cpl": 0.0}
+
+    since = min(parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns)
+    campaign_ids = [campaign["id"] for campaign in campaigns]
+    return fetch_summary(campaign_ids, since.isoformat(), today.isoformat())
+
+
 def build_message() -> str | None:
     account_timezone = fetch_account_timezone()
     today = datetime.now(account_timezone).date()
@@ -190,25 +218,37 @@ def build_message() -> str | None:
         print(f"No active campaign containing {CAMPAIGN_NAME_FILTER!r}. Nothing to send.")
         return None
 
-    campaign_ids = [campaign["id"] for campaign in campaigns]
-    accumulated_since = min(
-        parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns
-    )
+    warm_campaigns, cold_campaigns = split_campaigns(campaigns)
+    warm_ids = [campaign["id"] for campaign in warm_campaigns]
+    cold_ids = [campaign["id"] for campaign in cold_campaigns]
+    all_ids = [campaign["id"] for campaign in campaigns]
 
-    yesterday_summary = fetch_summary(campaign_ids, yesterday.isoformat(), yesterday.isoformat())
-    accumulated_summary = fetch_summary(campaign_ids, accumulated_since.isoformat(), today.isoformat())
+    warm_yesterday = fetch_summary(warm_ids, yesterday.isoformat(), yesterday.isoformat())
+    cold_yesterday = fetch_summary(cold_ids, yesterday.isoformat(), yesterday.isoformat())
+    total_yesterday = fetch_summary(all_ids, yesterday.isoformat(), yesterday.isoformat())
+
+    warm_accumulated = accumulated_summary(warm_campaigns, today)
+    cold_accumulated = accumulated_summary(cold_campaigns, today)
+    total_accumulated = accumulated_summary(campaigns, today)
+
+    print("Publico quente:", ", ".join(campaign["name"] for campaign in warm_campaigns) or "nenhuma")
+    print("Publico frio:", ", ".join(campaign["name"] for campaign in cold_campaigns) or "nenhuma")
 
     return (
         "📊 BOM DIA — Fechamento de ontem\n"
         f"📅 {date_br(yesterday)} | {PROJECT_LABEL}\n\n"
-        "💰 ONTEM\n"
-        f"  Spend: {money(yesterday_summary['spend'])}\n"
-        f"  Leads: {int(yesterday_summary['leads'])}\n"
-        f"  CPL: {money(yesterday_summary['cpl'])}\n\n"
+        "🔥 PÚBLICO QUENTE — ONTEM\n"
+        f"{summary_block(warm_yesterday)}\n\n"
+        "❄️ PÚBLICO FRIO — ONTEM\n"
+        f"{summary_block(cold_yesterday)}\n\n"
+        "💰 TOTAL ONTEM\n"
+        f"{summary_block(total_yesterday)}\n\n"
+        "📈 ACUMULADO — PÚBLICO QUENTE\n"
+        f"{summary_block(warm_accumulated)}\n\n"
+        "📈 ACUMULADO — PÚBLICO FRIO\n"
+        f"{summary_block(cold_accumulated)}\n\n"
         "📈 ACUMULADO GERAL\n"
-        f"  Spend: {money(accumulated_summary['spend'])}\n"
-        f"  Leads: {int(accumulated_summary['leads'])}\n"
-        f"  CPL: {money(accumulated_summary['cpl'])}"
+        f"{summary_block(total_accumulated)}"
     )
 
 
