@@ -1,0 +1,46 @@
+name: Apagar mensagem do Telegram
+
+on:
+  workflow_dispatch:
+    inputs:
+      message_id:
+        description: ID da mensagem do Telegram
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  delete-message:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: "-1001969196147"
+      TELEGRAM_MESSAGE_ID: ${{ inputs.message_id }}
+
+    steps:
+      - name: Delete Telegram message
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          params = urlencode({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "message_id": os.environ["TELEGRAM_MESSAGE_ID"],
+          }).encode()
+          request = Request(
+              f"https://api.telegram.org/bot{os.environ['TELEGRAM_BOT_TOKEN']}/deleteMessage",
+              data=params,
+              method="POST",
+          )
+          with urlopen(request, timeout=30) as response:
+              result = json.loads(response.read().decode())
+          if not result.get("ok") or not result.get("result"):
+              raise SystemExit(f"Telegram deletion failed: {result}")
+          print(f"Telegram message {os.environ['TELEGRAM_MESSAGE_ID']} deleted.")
+          PY
