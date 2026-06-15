@@ -1,9 +1,6 @@
 name: Relatorio diario AGX Captador
 
 on:
-  schedule:
-    # Tenta em varios horarios; o primeiro run depois das 09h envia e a trava evita duplicidade.
-    - cron: "17 12,14,16,18,20,22 * * *"
   workflow_dispatch:
 
 concurrency:
