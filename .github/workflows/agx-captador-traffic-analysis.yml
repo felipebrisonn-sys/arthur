@@ -1,0 +1,31 @@
+name: Analise trafego AGX Captador
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-traffic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_GRAPH_API_VERSION: v20.0
+      META_ACCOUNT_ID: act_519770400740924
+      CAMPAIGN_NAME_FILTER: "[CAPTADOR]"
+      PROJECT_LABEL: "Funil de Aplicação Captador"
+      LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run traffic analysis
+        run: python scripts/analyze_agx_captador_traffic.py
