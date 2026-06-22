@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -16,6 +16,8 @@ META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 META_ACCOUNT_ID = os.getenv("META_ACCOUNT_ID", "act_519770400740924")
 CAMPAIGN_NAME_FILTER = os.getenv("CAMPAIGN_NAME_FILTER", "[CAPTADOR]")
 LEAD_ACTION_TYPE = os.getenv("LEAD_ACTION_TYPE", "offsite_conversion.fb_pixel_custom")
+ANALYSIS_SINCE = os.getenv("ANALYSIS_SINCE", "2026-06-01").strip()
+ANALYSIS_UNTIL = os.getenv("ANALYSIS_UNTIL", "2026-06-07").strip()
 
 
 def request_json(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -149,6 +151,22 @@ def fetch_account_timezone() -> ZoneInfo:
     return ZoneInfo(account.get("timezone_name") or "America/New_York")
 
 
+def resolve_analysis_period(account_timezone: ZoneInfo) -> tuple[date, date]:
+    if bool(ANALYSIS_SINCE) != bool(ANALYSIS_UNTIL):
+        raise SystemExit("Preencha ANALYSIS_SINCE e ANALYSIS_UNTIL juntos.")
+
+    if ANALYSIS_SINCE and ANALYSIS_UNTIL:
+        since = date.fromisoformat(ANALYSIS_SINCE)
+        until = date.fromisoformat(ANALYSIS_UNTIL)
+        if since > until:
+            raise SystemExit("ANALYSIS_SINCE nao pode ser posterior a ANALYSIS_UNTIL.")
+        return since, until
+
+    today = datetime.now(account_timezone).date()
+    until = today - timedelta(days=1)
+    return until - timedelta(days=6), until
+
+
 def fetch_matching_campaigns() -> list[dict[str, Any]]:
     campaigns = graph_get_all(
         f"/{META_ACCOUNT_ID}/campaigns",
@@ -254,9 +272,7 @@ def main() -> int:
         raise SystemExit("Missing META_ACCESS_TOKEN")
 
     account_timezone = fetch_account_timezone()
-    today = datetime.now(account_timezone).date()
-    until = today - timedelta(days=1)
-    since = until - timedelta(days=6)
+    since, until = resolve_analysis_period(account_timezone)
 
     campaigns = fetch_matching_campaigns()
     if not campaigns:
@@ -277,6 +293,11 @@ def main() -> int:
         print(f"- {campaign['name']} ({campaign['id']}) | {campaign.get('effective_status')}")
     print()
     print(line_summary("RESUMO GERAL", summary))
+    print()
+
+    print("CAMPANHAS - RESUMO")
+    for row in sorted(campaign_rows, key=lambda item: item.get("campaign_name", "")):
+        print(table_row(row, "campaign_name"))
     print()
 
     print("EVOLUCAO DIARIA")
