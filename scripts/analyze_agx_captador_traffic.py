@@ -16,8 +16,8 @@ META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 META_ACCOUNT_ID = os.getenv("META_ACCOUNT_ID", "act_519770400740924")
 CAMPAIGN_NAME_FILTER = os.getenv("CAMPAIGN_NAME_FILTER", "[CAPTADOR]")
 LEAD_ACTION_TYPE = os.getenv("LEAD_ACTION_TYPE", "offsite_conversion.fb_pixel_custom")
-ANALYSIS_SINCE = os.getenv("ANALYSIS_SINCE", "2026-06-01").strip()
-ANALYSIS_UNTIL = os.getenv("ANALYSIS_UNTIL", "2026-06-07").strip()
+ANALYSIS_SINCE = os.getenv("ANALYSIS_SINCE", "").strip()
+ANALYSIS_UNTIL = os.getenv("ANALYSIS_UNTIL", "").strip()
 
 
 def request_json(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
