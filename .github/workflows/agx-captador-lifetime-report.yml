@@ -1,0 +1,35 @@
+name: Relatorio completo AGX Captador
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  send-lifetime-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      META_GRAPH_API_VERSION: v20.0
+      META_ACCOUNT_ID: act_8501954776581917
+      CAMPAIGN_NAME_FILTER: "[CAPTADOR]"
+      PROJECT_LABEL: "Funil de Aplicação Captador"
+      LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
+      TELEGRAM_CHAT_ID: "-1001969196147"
+      TELEGRAM_MESSAGE_THREAD_ID: "301599"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Send complete Telegram report
+        run: python scripts/send_agx_lifetime_captador_report.py
