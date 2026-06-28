@@ -24,7 +24,7 @@ jobs:
       META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       META_GRAPH_API_VERSION: v20.0
-      META_ACCOUNT_ID: act_519770400740924
+      META_ACCOUNT_ID: act_8501954776581917
       CAMPAIGN_NAME_FILTER: "[CAPTADOR]"
       PROJECT_LABEL: "Funil de Aplicação Captador"
       LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
