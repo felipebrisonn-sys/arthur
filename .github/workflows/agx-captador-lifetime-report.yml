@@ -2,6 +2,15 @@ name: Relatorio completo AGX Captador
 
 on:
   workflow_dispatch:
+    inputs:
+      since:
+        description: Data inicial (AAAA-MM-DD). Vazio usa todo o periodo.
+        required: false
+        type: string
+      until:
+        description: Data final (AAAA-MM-DD). Vazio usa ate hoje.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +30,8 @@ jobs:
       LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
       TELEGRAM_CHAT_ID: "-1001969196147"
       TELEGRAM_MESSAGE_THREAD_ID: "301599"
+      REPORT_SINCE: ${{ inputs.since }}
+      REPORT_UNTIL: ${{ inputs.until }}
 
     steps:
       - name: Checkout
