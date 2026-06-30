@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import sys
-from datetime import datetime
+import os
+from datetime import date, datetime
 
 import send_agx_weekly_captador_report as report
 
@@ -14,25 +15,40 @@ def audience_label(campaign_name: str) -> str:
 def build_messages() -> list[str]:
     account_timezone = report.fetch_account_timezone()
     today = datetime.now(account_timezone).date()
+    requested_since = os.getenv("REPORT_SINCE", "").strip()
+    requested_until = os.getenv("REPORT_UNTIL", "").strip()
+    if bool(requested_since) != bool(requested_until):
+        raise SystemExit("Preencha REPORT_SINCE e REPORT_UNTIL juntos.")
+
     campaigns = report.fetch_active_campaigns()
     if not campaigns:
         print(f"No active campaign containing {report.CAMPAIGN_NAME_FILTER!r}. Nothing to send.")
         return []
 
     campaign_ids = [campaign["id"] for campaign in campaigns]
-    period_since = min(
-        report.parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns
-    )
+    if requested_since and requested_until:
+        period_since = date.fromisoformat(requested_since)
+        period_until = date.fromisoformat(requested_until)
+        if period_since > period_until:
+            raise SystemExit("REPORT_SINCE nao pode ser posterior a REPORT_UNTIL.")
+    else:
+        period_since = min(
+            report.parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns
+        )
+        period_until = today
+
     campaign_rows = report.fetch_insights(
-        "campaign", campaign_ids, period_since.isoformat(), today.isoformat()
+        "campaign", campaign_ids, period_since.isoformat(), period_until.isoformat()
     )
     adset_rows = sorted(
-        report.fetch_insights("adset", campaign_ids, period_since.isoformat(), today.isoformat()),
+        report.fetch_insights(
+            "adset", campaign_ids, period_since.isoformat(), period_until.isoformat()
+        ),
         key=lambda row: row["spend_n"],
         reverse=True,
     )
     ad_rows = report.fetch_insights(
-        "ad", campaign_ids, period_since.isoformat(), today.isoformat()
+        "ad", campaign_ids, period_since.isoformat(), period_until.isoformat()
     )
 
     cold_ids = {
@@ -50,7 +66,7 @@ def build_messages() -> list[str]:
     messages = [
         (
             "📊 RELATÓRIO COMPLETO — Arthur Captador | Launch 2\n"
-            f"📅 {report.date_br(period_since)} até {report.date_br(today)}\n\n"
+            f"📅 {report.date_br(period_since)} até {report.date_br(period_until)}\n\n"
             "🔥 PÚBLICO QUENTE — ACUMULADO\n"
             f"{report.summary_block(report.summarize(warm_rows))}\n\n"
             "❄️ PÚBLICO FRIO — ACUMULADO\n"
