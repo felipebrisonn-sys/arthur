@@ -1,0 +1,31 @@
+name: Analise mensal AGX duas contas
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-periods:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_GRAPH_API_VERSION: v20.0
+      META_ACCOUNT_IDS: act_519770400740924,act_8501954776581917
+      CAMPAIGN_NAME_FILTER: "[CAPTADOR]"
+      LEAD_ACTION_TYPE: offsite_conversion.fb_pixel_custom
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Analyze May and June
+        run: python scripts/analyze_agx_multi_account_periods.py
