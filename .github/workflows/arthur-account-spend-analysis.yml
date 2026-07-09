@@ -1,0 +1,36 @@
+name: Analise investimento Arthur por conta
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/analyze_arthur_account_spend_since_sep_2024.py
+      - .github/workflows/arthur-account-spend-analysis.yml
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-spend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+      META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+      META_GRAPH_API_VERSION: v20.0
+      ACCOUNT_NAME_FILTER: Arthur
+      KNOWN_ACCOUNT_IDS: act_519770400740924,act_8501954776581917
+      SINCE: "2024-09-01"
+      UNTIL: "2026-07-09"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Analyze account spend
+        run: python scripts/analyze_arthur_account_spend_since_sep_2024.py
