@@ -10,12 +10,6 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from common import load_env
-
-
-load_env()
-
-
 META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v20.0")
 META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
 ACCOUNT_NAME_FILTER = os.getenv("ACCOUNT_NAME_FILTER", "Arthur").strip()
