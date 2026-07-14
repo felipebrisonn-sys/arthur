@@ -248,11 +248,11 @@ def build_message() -> str | None:
         f"{summary_block(cold_yesterday)}\n\n"
         "💰 TOTAL ONTEM\n"
         f"{summary_block(total_yesterday)}\n\n"
-        "📈 ACUMULADO DO MÊS — PÚBLICO QUENTE\n"
+        f"📈 ACUMULADO DO MÊS — PÚBLICO QUENTE ({date_br(month_start)} até {date_br(yesterday)})\n"
         f"{summary_block(warm_accumulated)}\n\n"
-        "📈 ACUMULADO DO MÊS — PÚBLICO FRIO\n"
+        f"📈 ACUMULADO DO MÊS — PÚBLICO FRIO ({date_br(month_start)} até {date_br(yesterday)})\n"
         f"{summary_block(cold_accumulated)}\n\n"
-        "📈 ACUMULADO GERAL DO MÊS\n"
+        f"📈 ACUMULADO GERAL — MÊS ATUAL ({date_br(month_start)} até {date_br(yesterday)})\n"
         f"{summary_block(total_accumulated)}"
     )
 
