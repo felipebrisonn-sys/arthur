@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 META_GRAPH_API_VERSION = os.getenv("META_GRAPH_API_VERSION", "v20.0")
 META_ACCESS_TOKEN = os.getenv("META_ACCESS_TOKEN", "")
-META_ACCOUNT_ID = os.getenv("META_ACCOUNT_ID", "act_519770400740924")
+META_ACCOUNT_ID = os.getenv("META_ACCOUNT_ID", "act_8501954776581917")
 CAMPAIGN_NAME_FILTER = os.getenv("CAMPAIGN_NAME_FILTER", "[CAPTADOR]")
 PROJECT_LABEL = os.getenv("PROJECT_LABEL", "Funil de Aplicação Captador")
 LEAD_ACTION_TYPE = os.getenv("LEAD_ACTION_TYPE", "offsite_conversion.fb_pixel_custom")
@@ -133,7 +133,7 @@ def fetch_account_timezone() -> ZoneInfo:
     return ZoneInfo(timezone_name)
 
 
-def fetch_active_campaigns() -> list[dict[str, Any]]:
+def fetch_campaigns() -> list[dict[str, Any]]:
     campaigns: list[dict[str, Any]] = []
     after = None
 
@@ -158,7 +158,6 @@ def fetch_active_campaigns() -> list[dict[str, Any]]:
         campaign
         for campaign in campaigns
         if filter_text in campaign.get("name", "").lower()
-        and campaign.get("effective_status") == "ACTIVE"
     ]
 
 
@@ -199,13 +198,13 @@ def split_campaigns(campaigns: list[dict[str, Any]]) -> tuple[list[dict[str, Any
     return warm_campaigns, cold_campaigns
 
 
-def accumulated_summary(campaigns: list[dict[str, Any]], today) -> dict[str, float]:
+def accumulated_summary(campaigns: list[dict[str, Any]], until_date) -> dict[str, float]:
     if not campaigns:
         return {"spend": 0.0, "leads": 0.0, "cpl": 0.0}
 
     since = min(parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns)
     campaign_ids = [campaign["id"] for campaign in campaigns]
-    return fetch_summary(campaign_ids, since.isoformat(), today.isoformat())
+    return fetch_summary(campaign_ids, since.isoformat(), until_date.isoformat())
 
 
 def build_message() -> str | None:
@@ -213,8 +212,13 @@ def build_message() -> str | None:
     today = datetime.now(account_timezone).date()
     yesterday = today - timedelta(days=1)
 
-    campaigns = fetch_active_campaigns()
-    if not campaigns:
+    campaigns = fetch_campaigns()
+    active_campaigns = [
+        campaign
+        for campaign in campaigns
+        if campaign.get("effective_status") == "ACTIVE"
+    ]
+    if not active_campaigns:
         print(f"No active campaign containing {CAMPAIGN_NAME_FILTER!r}. Nothing to send.")
         return None
 
@@ -227,12 +231,13 @@ def build_message() -> str | None:
     cold_yesterday = fetch_summary(cold_ids, yesterday.isoformat(), yesterday.isoformat())
     total_yesterday = fetch_summary(all_ids, yesterday.isoformat(), yesterday.isoformat())
 
-    warm_accumulated = accumulated_summary(warm_campaigns, today)
-    cold_accumulated = accumulated_summary(cold_campaigns, today)
-    total_accumulated = accumulated_summary(campaigns, today)
+    warm_accumulated = accumulated_summary(warm_campaigns, yesterday)
+    cold_accumulated = accumulated_summary(cold_campaigns, yesterday)
+    total_accumulated = accumulated_summary(campaigns, yesterday)
 
     print("Publico quente:", ", ".join(campaign["name"] for campaign in warm_campaigns) or "nenhuma")
     print("Publico frio:", ", ".join(campaign["name"] for campaign in cold_campaigns) or "nenhuma")
+    print("Campanhas ativas:", ", ".join(campaign["name"] for campaign in active_campaigns) or "nenhuma")
 
     return (
         "📊 BOM DIA — Fechamento de ontem\n"
