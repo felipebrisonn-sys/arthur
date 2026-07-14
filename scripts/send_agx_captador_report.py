@@ -198,19 +198,19 @@ def split_campaigns(campaigns: list[dict[str, Any]]) -> tuple[list[dict[str, Any
     return warm_campaigns, cold_campaigns
 
 
-def accumulated_summary(campaigns: list[dict[str, Any]], until_date) -> dict[str, float]:
+def accumulated_summary(campaigns: list[dict[str, Any]], since_date, until_date) -> dict[str, float]:
     if not campaigns:
         return {"spend": 0.0, "leads": 0.0, "cpl": 0.0}
 
-    since = min(parse_meta_datetime(campaign["created_time"]).date() for campaign in campaigns)
     campaign_ids = [campaign["id"] for campaign in campaigns]
-    return fetch_summary(campaign_ids, since.isoformat(), until_date.isoformat())
+    return fetch_summary(campaign_ids, since_date.isoformat(), until_date.isoformat())
 
 
 def build_message() -> str | None:
     account_timezone = fetch_account_timezone()
     today = datetime.now(account_timezone).date()
     yesterday = today - timedelta(days=1)
+    month_start = yesterday.replace(day=1)
 
     campaigns = fetch_campaigns()
     active_campaigns = [
@@ -231,9 +231,9 @@ def build_message() -> str | None:
     cold_yesterday = fetch_summary(cold_ids, yesterday.isoformat(), yesterday.isoformat())
     total_yesterday = fetch_summary(all_ids, yesterday.isoformat(), yesterday.isoformat())
 
-    warm_accumulated = accumulated_summary(warm_campaigns, yesterday)
-    cold_accumulated = accumulated_summary(cold_campaigns, yesterday)
-    total_accumulated = accumulated_summary(campaigns, yesterday)
+    warm_accumulated = accumulated_summary(warm_campaigns, month_start, yesterday)
+    cold_accumulated = accumulated_summary(cold_campaigns, month_start, yesterday)
+    total_accumulated = accumulated_summary(campaigns, month_start, yesterday)
 
     print("Publico quente:", ", ".join(campaign["name"] for campaign in warm_campaigns) or "nenhuma")
     print("Publico frio:", ", ".join(campaign["name"] for campaign in cold_campaigns) or "nenhuma")
@@ -248,11 +248,11 @@ def build_message() -> str | None:
         f"{summary_block(cold_yesterday)}\n\n"
         "💰 TOTAL ONTEM\n"
         f"{summary_block(total_yesterday)}\n\n"
-        "📈 ACUMULADO — PÚBLICO QUENTE\n"
+        "📈 ACUMULADO DO MÊS — PÚBLICO QUENTE\n"
         f"{summary_block(warm_accumulated)}\n\n"
-        "📈 ACUMULADO — PÚBLICO FRIO\n"
+        "📈 ACUMULADO DO MÊS — PÚBLICO FRIO\n"
         f"{summary_block(cold_accumulated)}\n\n"
-        "📈 ACUMULADO GERAL\n"
+        "📈 ACUMULADO GERAL DO MÊS\n"
         f"{summary_block(total_accumulated)}"
     )
 
