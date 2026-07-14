@@ -57,7 +57,7 @@ jobs:
         run: echo "Ainda nao sao 09h em Brasilia; nao enviando."
 
       - name: Verificar se ja enviou hoje
-        if: steps.send-window.outputs.in_window == 'true'
+        if: steps.send-window.outputs.in_window == 'true' && github.event_name != 'workflow_dispatch'
         id: sent-cache
         uses: actions/cache/restore@v4
         with:
@@ -65,21 +65,21 @@ jobs:
           key: agx-captador-sent-${{ steps.send-window.outputs.date }}
 
       - name: Ja enviado hoje
-        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit == 'true'
+        if: steps.send-window.outputs.in_window == 'true' && github.event_name != 'workflow_dispatch' && steps.sent-cache.outputs.cache-hit == 'true'
         run: echo "Relatorio ja enviado hoje; pulando duplicata."
 
       - name: Setup Python
-        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true'
+        if: steps.send-window.outputs.in_window == 'true' && (github.event_name == 'workflow_dispatch' || steps.sent-cache.outputs.cache-hit != 'true')
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Send Telegram report
-        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true'
+        if: steps.send-window.outputs.in_window == 'true' && (github.event_name == 'workflow_dispatch' || steps.sent-cache.outputs.cache-hit != 'true')
         run: python scripts/send_agx_captador_report.py
 
       - name: Salvar trava do envio de hoje
-        if: steps.send-window.outputs.in_window == 'true' && steps.sent-cache.outputs.cache-hit != 'true' && hashFiles('.agx-report-sent/sent.txt') != ''
+        if: steps.send-window.outputs.in_window == 'true' && github.event_name != 'workflow_dispatch' && steps.sent-cache.outputs.cache-hit != 'true' && hashFiles('.agx-report-sent/sent.txt') != ''
         uses: actions/cache/save@v4
         with:
           path: .agx-report-sent
